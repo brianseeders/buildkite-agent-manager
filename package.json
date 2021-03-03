@@ -1,0 +1,44 @@
+{
+  "name": "elastic-buildkite-manager",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "rm -rf build && tsc --project ./",
+    "build:docker": "docker build -t elastic-buildkite-manager:local .",
+    "start": "ts-node src/index.ts",
+    "test": "jest --coverage --no-cache",
+    "test:watch": "jest --watch",
+    "watch": "nodemon src/index.ts"
+  },
+  "author": "Brian Seeders <brian.seeders@elastic.co>",
+  "dependencies": {
+    "@elastic/ecs-winston-format": "^0.2.0",
+    "@google-cloud/compute": "^2.4.3",
+    "@google-cloud/secret-manager": "^3.2.0",
+    "@octokit/rest": "^18.0.9",
+    "@octokit/webhooks": "^7.15.1",
+    "axios": "^0.21.1",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "googleapis": "^67.1.0",
+    "got": "^11.8.1",
+    "install": "^0.13.0",
+    "npm": "^7.6.0",
+    "winston": "^3.3.3"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.9",
+    "@types/jest": "^26.0.15",
+    "@types/node": "^14.14.6",
+    "eslint": "^7.11.0",
+    "eslint-plugin-jest": "^24.1.0",
+    "eventsource": "^1.0.7",
+    "jest": "^26.4.2",
+    "nodemon": "^2.0.4",
+    "prettier": "^2.1.2",
+    "ts-jest": "^26.4.3",
+    "ts-node": "^9.0.0",
+    "typescript": "^4.0.5"
+  }
+}
