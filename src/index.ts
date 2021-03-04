@@ -35,14 +35,14 @@ function sleep(ms) {
     doRun();
   };
 
+  // const buildkite = new Buildkite();
+  // const agents = await buildkite.getAgents();
+  // console.log(agents);
+  // return;
+
   doRun();
   logger.info('App started');
 
-  return;
-
-  const buildkite = new Buildkite();
-  const agents = await buildkite.getAgents();
-  console.log(agents);
   return;
 
   // change to return { gcp: { agents: [], }}?

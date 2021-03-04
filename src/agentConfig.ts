@@ -119,11 +119,11 @@ const config: TopLevelConfig = {
         queue: 'default',
         name: 'kibana-buildkite',
         overprovision: 0, // percentage or flat number
-        minimumAgents: 0,
+        minimumAgents: 5,
         maximumAgents: 500,
         gracefulStopAfterSecs: 60 * 60 * 6,
         hardStopAfterSecs: 60 * 60 * 9,
-        idleTimeoutSecs: 600, // stopAfterIdleSecs?
+        idleTimeoutSecs: 60 * 60, // stopAfterIdleSecs?
         exitAfterOneJob: false,
         imageFamily: 'kibana-bk-dev-agents',
         machineType: 'e2-small', // e2-small/micro
