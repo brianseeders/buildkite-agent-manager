@@ -13,6 +13,27 @@ export interface AgentMetrics {
   organization: { slug: string };
 }
 
+export interface Agent {
+  id: string;
+  url: string;
+  web_url: string;
+  name: string;
+  connection_state: string;
+  ip_address: string;
+  hostname: string;
+  user_agent: string;
+  version: string;
+  creator: string;
+  created_at: string;
+  job?: {
+    [key: string]: any;
+    // TODO create a separate interface and fill in if we ever need job
+  };
+  last_job_finished_at: string;
+  priority: number;
+  meta_data: string[];
+}
+
 export class Buildkite {
   http: AxiosInstance;
   agentHttp: AxiosInstance;
@@ -33,7 +54,7 @@ export class Buildkite {
     });
   }
 
-  getAgents = async () => {
+  getAgents = async (): Promise<Agent[]> => {
     let link = 'v2/organizations/elastic/agents?per_page=100';
     const agents = [];
 
@@ -61,5 +82,9 @@ export class Buildkite {
 
   getAgentMetrics = async (queue: string) => {
     return (await this.agentHttp.get(`metrics/queue?name=${encodeURIComponent(queue)}`)).data as AgentMetrics;
+  };
+
+  stopAgent = async (agent: Agent) => {
+    return await this.http.put(`v2/organizations/elastic/agents/${agent.id}/stop`, { force: false });
   };
 }

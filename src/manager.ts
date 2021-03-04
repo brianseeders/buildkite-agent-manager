@@ -1,7 +1,7 @@
 import PromisePool from '@supercharge/promise-pool';
 import { TopLevelConfig, getConfig, getAgentConfigs, GcpAgentConfiguration, AgentConfiguration } from './agentConfig';
 import { createInstance, deleteInstance, GcpInstance, getAllAgentInstances, getImageForFamily } from './gcp';
-import { AgentMetrics, Buildkite } from './buildkite';
+import { Agent, AgentMetrics, Buildkite } from './buildkite';
 import { exec } from 'child_process';
 import logger from './lib/logger';
 
@@ -10,7 +10,7 @@ const buildkite = new Buildkite();
 
 export interface ManagerContext {
   config: AgentConfiguration;
-  buildkiteAgents: any[];
+  buildkiteAgents: Agent[];
   buildkiteQueues: Record<string, AgentMetrics>;
   gcpInstances: GcpInstance[];
 }
@@ -109,13 +109,29 @@ export function getStoppedInstances(context: ManagerContext) {
   return instances;
 }
 
+// Agents with an instance created by an old version of a config
+export function getStaleAgents(context: ManagerContext) {
+  const agents = [];
+  for (const agentConfig of context.config.gcp.agents) {
+    const hash = agentConfig.hash();
+
+    context.buildkiteAgents
+      .filter((agent) => agent.connection_state === 'connected')
+      .filter((agent) => agent.meta_data?.includes(`queue=${agentConfig.queue}`))
+      .filter((agent) => !agent.meta_data?.includes(`hash=${hash}`))
+      .forEach((agent) => agents.push(agent));
+  }
+
+  return agents;
+}
+
 export function createPlan(context: ManagerContext) {
   const plan: ExecutionPlan = {
     gcp: {
       instancesToDelete: getStoppedInstances(context), // deleted instances and instances past the hard-stop limit
       agentConfigsToCreate: getAgentConfigsToCreate(context),
     },
-    agentsToStop: [], // agents attached to outdated configs, or ones that have reached their configed soft time limit
+    agentsToStop: getStaleAgents(context), // agents attached to outdated configs, or ones that have reached their configed soft time limit
     // also, if there are too many agents of a given type, order than by name or creation and soft stop the extras
   };
 
@@ -166,6 +182,25 @@ export async function deleteInstances(instances: GcpInstance[]) {
   }
 }
 
+export async function stopAgents(agents: Agent[]) {
+  logger.info(`Stopping ${agents.length} agents: ${agents.map((a) => a.name).join(', ')}`);
+
+  try {
+    const { results, errors } = await PromisePool.for(agents)
+      .withConcurrency(5)
+      .handleError(async (error) => {
+        // This will cause the pool to stop creating instances after the first error
+        throw error;
+      })
+      .process(async (agent) => {
+        await buildkite.stopAgent(agent);
+        return true;
+      });
+  } finally {
+    logger.info('Done stopping agents');
+  }
+}
+
 export async function executePlan(context: ManagerContext, plan: ExecutionPlan) {
   const promises: Promise<any>[] = [];
 
@@ -177,6 +212,10 @@ export async function executePlan(context: ManagerContext, plan: ExecutionPlan) 
 
   if (plan.gcp.instancesToDelete?.length) {
     promises.push(deleteInstances(plan.gcp.instancesToDelete));
+  }
+
+  if (plan.agentsToStop?.length) {
+    promises.push(stopAgents(plan.agentsToStop));
   }
 
   await Promise.all(promises);
@@ -202,13 +241,15 @@ export async function run() {
 
   const context: ManagerContext = {
     config: config,
-    buildkiteAgents: agents as any[],
+    buildkiteAgents: agents,
     gcpInstances: instances,
     buildkiteQueues: queues,
   };
 
   const plan = createPlan(context);
 
-  logger.debug(plan);
+  logger.debug('Plan', plan);
+  //return;
+
   await executePlan(context, plan);
 }
