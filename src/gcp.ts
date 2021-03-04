@@ -28,7 +28,7 @@ export type GcpInstance = {
     //   items?: string[]
     // },
     machineType: string;
-    status: 'TERMINATED' | 'ASDF'; // TODO
+    status: 'TERMINATED' | 'STOPPING' | 'PROVISIONING' | 'STAGING' | 'RUNNING' | 'REPAIRING' | 'SUSPENDING' | 'SUSPENDED';
     zone: string;
     metadata: {
       items: { key: string; value: string }[];
@@ -47,11 +47,31 @@ export async function getOrCreateInstanceGroup(config: GcpAgentConfiguration) {
   return ig[0] as InstanceGroup;
 }
 
+export function getBuildkiteConfig(agentConfig: GcpAgentConfiguration) {
+  const bkConfig: Record<string, string | number | boolean> = {
+    tags: `queue=${agentConfig.queue},hash=${agentConfig.hash()}`,
+    name: '%hostname',
+    'build-path': '/var/lib/buildkite-agent/builds',
+  };
+
+  if (agentConfig.idleTimeoutSecs) {
+    bkConfig['disconnect-after-idle-timeout'] = agentConfig.idleTimeoutSecs;
+  }
+
+  if (agentConfig.exitAfterOneJob) {
+    bkConfig['disconnect-after-job'] = true;
+  }
+
+  return Object.keys(bkConfig)
+    .map((key) => `${key}="${bkConfig[key].toString()}"`)
+    .join('\n');
+}
+
 export async function createInstance(agentConfig: GcpAgentConfiguration, ig: InstanceGroup = null) {
   // ig = ig || (await getOrCreateInstanceGroup(agentConfig));
 
   const zone = compute.zone(agentConfig.zone);
-  const vm = zone.vm(`${agentConfig.name}-${new Date().getTime()}`);
+  const vm = zone.vm(`${agentConfig.name}-${new Date().getTime()}`); // TODO UUID or similar?
   const config = {
     disks: [
       {
@@ -92,8 +112,20 @@ export async function createInstance(agentConfig: GcpAgentConfiguration, ig: Ins
           value: agentConfig.name,
         },
         {
+          key: 'buildkite-agent-queue',
+          value: agentConfig.queue,
+        },
+        {
           key: 'buildkite-agent-hash',
           value: agentConfig.hash(),
+        },
+        {
+          key: 'buildkite-agent-config',
+          value: getBuildkiteConfig(agentConfig),
+        },
+        {
+          key: 'startup-script',
+          value: '/opt/bk-startup.sh',
         },
       ],
     },
@@ -116,14 +148,8 @@ export async function getAllAgentInstances(gcpConfig: GcpTopLevelConfig) {
   return vms[0] as GcpInstance[];
 }
 
-async function ensureSize(desiredSize) {
-  const [ig] = await instanceGroupManager.getMetadata();
-  const currentSize = ig.targetSize;
-
-  if (currentSize != desiredSize) {
-    console.log(ig);
-    console.log(`Scaling ${INSTANCE_GROUP} from ${currentSize} to ${desiredSize}`);
-
-    await instanceGroupManager.resize(desiredSize);
-  }
+export async function deleteInstance(instance: GcpInstance) {
+  const zone = compute.zone(instance.metadata.zone.split('/').pop());
+  const vm = zone.vm(instance.metadata.name);
+  return vm.delete();
 }

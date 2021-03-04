@@ -1,7 +1,8 @@
 import { TopLevelConfig, getConfig, getAgentConfigs, GcpAgentConfiguration, AgentConfiguration } from './agentConfig';
-import { createInstance, GcpInstance, getAllAgentInstances } from './gcp';
+import { createInstance, deleteInstance, GcpInstance, getAllAgentInstances } from './gcp';
 import { AgentMetrics, Buildkite } from './buildkite';
 import { exec } from 'child_process';
+import logger from './lib/logger';
 
 // TODO should this be purely functional?
 const buildkite = new Buildkite();
@@ -55,8 +56,10 @@ export function getAgentConfigsToCreate(context: ManagerContext) {
     const queue = context.buildkiteQueues[agent.queue];
     const jobs = queue ? queue.jobs.running + queue.jobs.scheduled : 0;
 
-    const instances = context.gcpInstances.filter((f) =>
-      f.metadata.metadata.items.find((i) => i.key === 'buildkxite-agent-name' && i.value === agent.name)
+    const instances = context.gcpInstances.filter(
+      (f) =>
+        ['PROVISIONING', 'STAGING', 'RUNNING'].includes(f.metadata.status) &&
+        f.metadata.metadata.items.find((i) => i.key === 'buildkite-agent-name' && i.value === agent.name)
     );
     const currentAgents = Math.max(instances.length, queue.agents.total);
 
@@ -90,13 +93,19 @@ export function getAgentConfigsToCreate(context: ManagerContext) {
   return toCreate;
 }
 
+export function getStoppedInstances(context: ManagerContext) {
+  const instances = context.gcpInstances.filter((i) => i.metadata.status === 'TERMINATED');
+  return instances;
+}
+
 export function createPlan(context: ManagerContext) {
   const plan: ExecutionPlan = {
     gcp: {
-      instancesToDelete: [], // deleted instances and instances past the hard-stop limit
+      instancesToDelete: getStoppedInstances(context), // deleted instances and instances past the hard-stop limit
       agentConfigsToCreate: getAgentConfigsToCreate(context),
     },
     agentsToStop: [], // agents attached to outdated configs, or ones that have reached their configed soft time limit
+    // also, if there are too many agents of a given type, order than by name or creation and soft stop the extras
   };
 
   return plan;
@@ -104,9 +113,18 @@ export function createPlan(context: ManagerContext) {
 
 // TODO do them in batches?
 export async function createInstances(context: ManagerContext, toCreate: AgentConfigToCreate) {
+  logger.info(`Creating ${toCreate.numberToCreate} instances of`, toCreate.config);
   for (let i = 0; i < toCreate.numberToCreate; i++) {
-    console.log(`Would create #${i + 1}:`, toCreate);
-    // await createInstance(toCreate.config);
+    // console.log(`Would create #${i + 1}:`, toCreate);
+    await createInstance(toCreate.config);
+  }
+}
+
+export async function deleteInstances(instances: GcpInstance[]) {
+  logger.info(`Deleting ${instances.length} instances: ${instances.map((i) => i.metadata.name).join(', ')}`);
+
+  for (const instance of instances) {
+    await deleteInstance(instance);
   }
 }
 
@@ -117,6 +135,10 @@ export async function executePlan(context: ManagerContext, plan: ExecutionPlan) 
     for (const config of plan.gcp.agentConfigsToCreate) {
       promises.push(createInstances(context, config));
     }
+  }
+
+  if (plan.gcp.instancesToDelete?.length) {
+    promises.push(deleteInstances(plan.gcp.instancesToDelete));
   }
 
   await Promise.all(promises);
@@ -142,6 +164,6 @@ export async function run() {
 
   const plan = createPlan(context);
 
-  console.log(plan);
+  logger.debug(plan);
   await executePlan(context, plan);
 }

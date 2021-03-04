@@ -51,7 +51,7 @@ export class GcpAgentConfiguration {
 
   serviceAccount?: string;
 
-  diskType?: string;
+  diskType?: 'pd-ssd' | 'pd-balanced' | 'pd-standard';
   diskSizeGb?: number;
   startupScript?: string;
   tags?: string[];
@@ -104,33 +104,52 @@ export class GcpAgentConfiguration {
   }
 }
 
-const config = {
+const config: TopLevelConfig = {
   gcp: {
     project: 'elastic-kibana-184716',
     zone: 'us-central1-b',
-    serviceAccount: '',
+    // serviceAccount: '',
     agents: [
       {
         queue: 'default',
         name: 'kibana-buildkite',
-        overprovision: 0, // 0.25 / 5
-        minimumAgents: 5,
+        overprovision: 0, // percentage or flat number
+        minimumAgents: 0,
         maximumAgents: 100,
         gracefulStopAfterSecs: 60 * 60 * 6,
         hardStopAfterSecs: 60 * 60 * 9,
-        idleTimeoutSecs: 600, // how to do this via metadata? // stopAfterIdleSecs?
+        idleTimeoutSecs: 600, // stopAfterIdleSecs?
         exitAfterOneJob: false,
-        image: 'bk-agent-1614194879',
+        image: 'bk-agent-1614806165',
+        machineType: 'e2-small', // e2-small/micro
+        // machineType: 'n2-standard-4',
+        diskType: 'pd-ssd',
+        diskSizeGb: 75,
+        startupScript: '',
+        tags: [],
+        metadata: {},
+      },
+      {
+        queue: 'ci-group',
+        name: 'kibana-buildkite-cigroup', // TODO max length?
+        overprovision: 0,
+        minimumAgents: 0,
+        maximumAgents: 100,
+        gracefulStopAfterSecs: 60 * 60 * 6,
+        hardStopAfterSecs: 60 * 60 * 9,
+        idleTimeoutSecs: 600,
+        exitAfterOneJob: false,
+        image: 'bk-agent-1614806165',
         machineType: 'n2-standard-8',
         diskType: 'pd-ssd',
         diskSizeGb: 256,
         startupScript: '',
         tags: [],
         metadata: {},
-      } as Partial<GcpAgentConfiguration>,
+      },
     ],
   },
-} as TopLevelConfig;
+};
 
 export function getAgentConfigsFromTopLevelConfig(config: TopLevelConfig) {
   const allConfigs = { gcp: [] } as { gcp: GcpAgentConfiguration[] };

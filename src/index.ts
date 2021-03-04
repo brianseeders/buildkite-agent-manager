@@ -12,6 +12,10 @@ import { getConfig, getAgentConfigs } from './agentConfig';
 import { Buildkite } from './buildkite';
 import { run } from './manager';
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 (async () => {
   if (process.env.BOOTSTRAP_GCP_SECRETS) {
     await bootstrapSecrets();
@@ -20,7 +24,18 @@ import { run } from './manager';
   if (process.env.DRY_RUN) {
   }
 
-  await run();
+  const doRun = async () => {
+    try {
+      await run();
+    } catch (ex) {
+      console.error(ex);
+    }
+
+    await sleep(30000);
+    doRun();
+  };
+
+  doRun();
   return;
 
   const buildkite = new Buildkite();
