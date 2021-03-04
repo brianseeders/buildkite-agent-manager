@@ -115,7 +115,7 @@ const config: TopLevelConfig = {
         name: 'kibana-buildkite',
         overprovision: 0, // percentage or flat number
         minimumAgents: 0,
-        maximumAgents: 100,
+        maximumAgents: 500,
         gracefulStopAfterSecs: 60 * 60 * 6,
         hardStopAfterSecs: 60 * 60 * 9,
         idleTimeoutSecs: 600, // stopAfterIdleSecs?

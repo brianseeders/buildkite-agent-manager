@@ -1,3 +1,4 @@
+import PromisePool from '@supercharge/promise-pool';
 import { TopLevelConfig, getConfig, getAgentConfigs, GcpAgentConfiguration, AgentConfiguration } from './agentConfig';
 import { createInstance, deleteInstance, GcpInstance, getAllAgentInstances } from './gcp';
 import { AgentMetrics, Buildkite } from './buildkite';
@@ -114,17 +115,44 @@ export function createPlan(context: ManagerContext) {
 // TODO do them in batches?
 export async function createInstances(context: ManagerContext, toCreate: AgentConfigToCreate) {
   logger.info(`Creating ${toCreate.numberToCreate} instances of`, toCreate.config);
-  for (let i = 0; i < toCreate.numberToCreate; i++) {
-    // console.log(`Would create #${i + 1}:`, toCreate);
-    await createInstance(toCreate.config);
+
+  try {
+    const { results, errors } = await PromisePool.for(new Array(toCreate.numberToCreate))
+      .withConcurrency(25)
+      .handleError(async (error) => {
+        // This will cause the pool to stop creating instances after the first error
+        throw error;
+      })
+      .process(async () => {
+        await createInstance(toCreate.config);
+        return true;
+      });
+  } finally {
+    logger.info('Done creating instances');
   }
+
+  // for (let i = 0; i < toCreate.numberToCreate; i++) {
+  //   // console.log(`Would create #${i + 1}:`, toCreate);
+  //   await createInstance(toCreate.config);
+  // }
 }
 
 export async function deleteInstances(instances: GcpInstance[]) {
   logger.info(`Deleting ${instances.length} instances: ${instances.map((i) => i.metadata.name).join(', ')}`);
 
-  for (const instance of instances) {
-    await deleteInstance(instance);
+  try {
+    const { results, errors } = await PromisePool.for(instances)
+      .withConcurrency(10)
+      .handleError(async (error) => {
+        // This will cause the pool to stop creating instances after the first error
+        throw error;
+      })
+      .process(async (instance) => {
+        await deleteInstance(instance);
+        return true;
+      });
+  } finally {
+    logger.info('Done deleting instances');
   }
 }
 

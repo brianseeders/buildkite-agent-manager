@@ -1,23 +1,7 @@
-import { google } from 'googleapis';
 import Compute from '@google-cloud/compute';
 import { GcpAgentConfiguration, GcpTopLevelConfig } from './agentConfig';
 
 const compute = new Compute();
-
-const ZONE = 'us-central1-a';
-const INSTANCE_GROUP = 'kibana-buildkite';
-
-const zone = compute.zone(ZONE);
-const instanceGroup = zone.instanceGroup(INSTANCE_GROUP);
-const instanceGroupManager = zone.instanceGroupManager(INSTANCE_GROUP);
-
-export type InstanceGroup = {
-  metadata: {
-    id: string;
-    name: string;
-    size: number;
-  };
-};
 
 export type GcpInstance = {
   metadata: {
@@ -36,16 +20,6 @@ export type GcpInstance = {
     labels?: Record<string, string>;
   };
 };
-
-export async function getOrCreateInstanceGroup(config: GcpAgentConfiguration) {
-  const zone = compute.zone(config.zone);
-  const instanceGroup = zone.instanceGroup(config.name);
-  const ig = await instanceGroup.get({
-    autoCreate: true,
-  });
-
-  return ig[0] as InstanceGroup;
-}
 
 export function getBuildkiteConfig(agentConfig: GcpAgentConfiguration) {
   const bkConfig: Record<string, string | number | boolean> = {
@@ -67,11 +41,9 @@ export function getBuildkiteConfig(agentConfig: GcpAgentConfiguration) {
     .join('\n');
 }
 
-export async function createInstance(agentConfig: GcpAgentConfiguration, ig: InstanceGroup = null) {
-  // ig = ig || (await getOrCreateInstanceGroup(agentConfig));
-
+export async function createInstance(agentConfig: GcpAgentConfiguration) {
   const zone = compute.zone(agentConfig.zone);
-  const vm = zone.vm(`${agentConfig.name}-${new Date().getTime()}`); // TODO UUID or similar?
+  const vm = zone.vm(`${agentConfig.name}-${process.hrtime().join('-')}`); // TODO UUID or similar?
   const config = {
     disks: [
       {
@@ -135,10 +107,6 @@ export async function createInstance(agentConfig: GcpAgentConfiguration, ig: Ins
   };
 
   const result = await vm.create(config);
-
-  // const instanceGroup = zone.instanceGroup(agentConfig.name);
-  // await instanceGroup.add(vm);
-
   return result;
 }
 

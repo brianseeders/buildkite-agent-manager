@@ -36,6 +36,8 @@ function sleep(ms) {
   };
 
   doRun();
+  logger.info('App started');
+
   return;
 
   const buildkite = new Buildkite();
