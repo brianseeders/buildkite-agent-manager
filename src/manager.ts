@@ -1,6 +1,6 @@
 import PromisePool from '@supercharge/promise-pool';
 import { TopLevelConfig, getConfig, getAgentConfigs, GcpAgentConfiguration, AgentConfiguration } from './agentConfig';
-import { createInstance, deleteInstance, GcpInstance, getAllAgentInstances } from './gcp';
+import { createInstance, deleteInstance, GcpInstance, getAllAgentInstances, getImageForFamily } from './gcp';
 import { AgentMetrics, Buildkite } from './buildkite';
 import { exec } from 'child_process';
 import logger from './lib/logger';
@@ -47,6 +47,16 @@ export async function getAllQueues(configs: GcpAgentConfiguration[]) {
   }
 
   return queuesByKey;
+}
+
+export async function getAllImages(projectId: string, configs: GcpAgentConfiguration[]) {
+  const uniqueFamilies = [...new Set(configs.map((c) => c.imageFamily).filter((f) => f))];
+  const families = {};
+  for (const family of uniqueFamilies) {
+    families[family] = (await getImageForFamily(projectId, family)).name;
+  }
+
+  return families as Record<string, string>;
 }
 
 export function getAgentConfigsToCreate(context: ManagerContext) {
@@ -177,11 +187,18 @@ export async function run() {
   // const agentConfigs = await getAgentConfigs();
 
   // TODO tie the relevant agents and instances together
-  const [agents, instances, queues] = await Promise.all([
+  const [agents, instances, queues, imagesFromFamilies] = await Promise.all([
     buildkite.getAgents(),
     getAllAgentInstances(config.gcp),
     getAllQueues(config.gcp.agents),
+    getAllImages(config.gcp.project, config.gcp.agents),
   ]);
+
+  config.gcp.agents.forEach((agent) => {
+    if (agent.imageFamily && !agent.image) {
+      agent.image = imagesFromFamilies[agent.imageFamily];
+    }
+  });
 
   const context: ManagerContext = {
     config: config,

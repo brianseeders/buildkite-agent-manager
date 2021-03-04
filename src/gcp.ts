@@ -1,7 +1,17 @@
 import Compute from '@google-cloud/compute';
+import { google } from 'googleapis';
 import { GcpAgentConfiguration, GcpTopLevelConfig } from './agentConfig';
 
 const compute = new Compute();
+const computeAlt = google.compute('v1');
+
+const auth = new google.auth.GoogleAuth({
+  scopes: ['https://www.googleapis.com/auth/compute'],
+});
+
+google.options({
+  auth: auth,
+});
 
 export type GcpInstance = {
   metadata: {
@@ -19,6 +29,19 @@ export type GcpInstance = {
     };
     labels?: Record<string, string>;
   };
+};
+
+export type GcpImage = {
+  id: string;
+  creationTimestamp: string;
+  name: string;
+  description: string;
+  family: string;
+  selfLink: string;
+  sourceType: string;
+  status: string;
+  archiveSizeBytes: string;
+  diskSizeGb: string;
 };
 
 export function getBuildkiteConfig(agentConfig: GcpAgentConfiguration) {
@@ -120,4 +143,13 @@ export async function deleteInstance(instance: GcpInstance) {
   const zone = compute.zone(instance.metadata.zone.split('/').pop());
   const vm = zone.vm(instance.metadata.name);
   return vm.delete();
+}
+
+export async function getImageForFamily(projectId: string, family: string) {
+  const result = await computeAlt.images.getFromFamily({
+    family: family,
+    project: projectId,
+  });
+
+  return result.data as GcpImage;
 }

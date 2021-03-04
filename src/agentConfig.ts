@@ -45,8 +45,8 @@ export class GcpAgentConfiguration {
 
   project: string;
   zone: string;
-  // imageFamily?: string; // ?
-  image: string;
+  imageFamily?: string;
+  image?: string;
   machineType: string;
 
   serviceAccount?: string;
@@ -66,11 +66,15 @@ export class GcpAgentConfiguration {
   hardStopAfterSecs?: number;
 
   constructor(config: Partial<GcpAgentConfiguration>) {
-    const requiredFields = ['name', 'queue', 'project', 'zone', 'image', 'machineType'];
+    const requiredFields = ['name', 'queue', 'project', 'zone', 'imageFamily', 'machineType'];
     for (const field of requiredFields) {
       if (!config[field]) {
         throw Error(`GCP agent config missing '${field}' field`);
       }
+    }
+
+    if (!config.image && !config.imageFamily) {
+      throw Error(`GCP agent config must include 'image' or 'imageFamily'`);
     }
 
     Object.assign(this, config);
@@ -83,6 +87,7 @@ export class GcpAgentConfiguration {
       'project',
       'zone',
       'image',
+      'imageFamily',
       'machineType',
       'serviceAccount',
       'diskType',
@@ -120,7 +125,7 @@ const config: TopLevelConfig = {
         hardStopAfterSecs: 60 * 60 * 9,
         idleTimeoutSecs: 600, // stopAfterIdleSecs?
         exitAfterOneJob: false,
-        image: 'bk-agent-1614806165',
+        imageFamily: 'kibana-bk-dev-agents',
         machineType: 'e2-small', // e2-small/micro
         // machineType: 'n2-standard-4',
         diskType: 'pd-ssd',
@@ -139,7 +144,7 @@ const config: TopLevelConfig = {
         hardStopAfterSecs: 60 * 60 * 9,
         idleTimeoutSecs: 600,
         exitAfterOneJob: false,
-        image: 'bk-agent-1614806165',
+        imageFamily: 'kibana-bk-dev-agents',
         machineType: 'n2-standard-8',
         diskType: 'pd-ssd',
         diskSizeGb: 256,
