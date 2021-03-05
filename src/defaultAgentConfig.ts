@@ -14,13 +14,13 @@ const defaultConfig: TopLevelConfig = {
         maximumAgents: 500,
         gracefulStopAfterSecs: 60 * 60 * 6,
         hardStopAfterSecs: 60 * 60 * 9,
-        idleTimeoutSecs: 60 * 60, // stopAfterIdleSecs?
+        idleTimeoutSecs: 60 * 15, // stopAfterIdleSecs?
         exitAfterOneJob: false,
         imageFamily: 'kibana-bk-dev-agents',
         machineType: 'e2-small', // e2-small/micro
         // machineType: 'n2-standard-4',
         diskType: 'pd-ssd',
-        diskSizeGb: 76,
+        diskSizeGb: 75,
         startupScript: '',
         tags: [],
         metadata: {},
