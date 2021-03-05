@@ -19,11 +19,16 @@ function sleep(ms) {
   }
 
   if (process.env.CONTINUOUS_MODE === 'true') {
+    logger.info(`Running in continuous mode, time between runs is ${TIME_BETWEEN_RUNS}ms`);
+
     const doRun = async () => {
+      logger.info(`Starting run`);
       try {
         await run();
       } catch (ex) {
         console.error(ex);
+      } finally {
+        logger.info(`Finished run`);
       }
 
       await sleep(TIME_BETWEEN_RUNS);
@@ -31,7 +36,6 @@ function sleep(ms) {
     };
 
     doRun();
-    logger.info('App started');
   } else {
     try {
       await run();

@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import Compute from '@google-cloud/compute';
 import { google } from 'googleapis';
 import { GcpAgentConfiguration, GcpTopLevelConfig } from './agentConfig';
+import logger from './lib/logger';
 
 const compute = new Compute();
 // ImageFamily fetching isn't included in @google-cloud/compute
@@ -145,7 +146,9 @@ export async function createInstance(agentConfig: GcpAgentConfiguration) {
 }
 
 export async function getAllAgentInstances(gcpConfig: GcpTopLevelConfig) {
+  logger.debug('[gcp] Getting all instances');
   const vms = await compute.getVMs({ filter: `labels.buildkite-agent=true`, maxResults: 500 });
+  logger.debug('[gcp] Finished getting all instances');
 
   return vms[0] as GcpInstance[];
 }

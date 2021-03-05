@@ -148,7 +148,7 @@ export function createPlan(context: ManagerContext) {
 }
 
 export async function createInstances(context: ManagerContext, toCreate: AgentConfigToCreate) {
-  logger.info(`Creating ${toCreate.numberToCreate} instances of`, toCreate.config);
+  logger.info(`[gcp] Creating ${toCreate.numberToCreate} instances of`, toCreate.config);
 
   try {
     await withPromisePool(25, new Array(toCreate.numberToCreate), async () => {
@@ -156,12 +156,12 @@ export async function createInstances(context: ManagerContext, toCreate: AgentCo
       return true;
     });
   } finally {
-    logger.info('Done creating instances');
+    logger.info('[gcp] Done creating instances');
   }
 }
 
 export async function deleteInstances(instances: GcpInstance[]) {
-  logger.info(`Deleting ${instances.length} instances: ${instances.map((i) => i.metadata.name).join(', ')}`);
+  logger.info(`[gcp] Deleting ${instances.length} instances: ${instances.map((i) => i.metadata.name).join(', ')}`);
 
   try {
     await withPromisePool(10, instances, async (instance) => {
@@ -169,12 +169,12 @@ export async function deleteInstances(instances: GcpInstance[]) {
       return true;
     });
   } finally {
-    logger.info('Done deleting instances');
+    logger.info('[gcp] Done deleting instances');
   }
 }
 
 export async function stopAgents(agents: Agent[]) {
-  logger.info(`Stopping ${agents.length} agents: ${agents.map((a) => a.name).join(', ')}`);
+  logger.info(`[buildkite] Stopping ${agents.length} agents: ${agents.map((a) => a.name).join(', ')}`);
 
   try {
     await withPromisePool(5, agents, async (agent) => {
@@ -182,7 +182,7 @@ export async function stopAgents(agents: Agent[]) {
       return true;
     });
   } finally {
-    logger.info('Done stopping agents');
+    logger.info('[buildkite] Done stopping agents');
   }
 }
 
@@ -209,14 +209,14 @@ export async function executePlan(context: ManagerContext, plan: ExecutionPlan) 
 export async function run() {
   const config = await getConfig();
 
-  logger.debug('Gathering data for current state');
+  logger.debug('[manager] Gathering data for current state');
   const [agents, instances, queues, imagesFromFamilies] = await Promise.all([
     buildkite.getAgents(),
     getAllAgentInstances(config.gcp),
     getAllQueues(config.gcp.agents),
     getAllImages(config.gcp.project, config.gcp.agents),
   ]);
-  logger.debug('Finished gathering data for current state');
+  logger.debug('[manager] Finished gathering data for current state');
 
   config.gcp.agents.forEach((agent) => {
     if (agent.imageFamily && !agent.image) {

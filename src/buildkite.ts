@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import logger from './lib/logger';
 import parseLinkHeader from './lib/parseLinkHeader';
 
 const BUILDKITE_BASE_URL = process.env.BUILDKITE_BASE_URL || 'https://api.buildkite.com';
@@ -55,6 +56,8 @@ export class Buildkite {
   }
 
   getAgents = async (): Promise<Agent[]> => {
+    logger.debug('[buildkite] Getting all agents');
+
     let link = 'v2/organizations/elastic/agents?per_page=100';
     const agents = [];
 
@@ -76,6 +79,8 @@ export class Buildkite {
         }
       }
     }
+
+    logger.debug('[buildkite] Finished getting all agents');
 
     return agents.flat();
   };
