@@ -1,6 +1,6 @@
 import { getAgentConfigs, getAgentConfigsFromTopLevelConfig } from './agentConfig';
 
-describe('agentConfig', () => {
+describe.skip('agentConfig', () => {
   test('should', async () => {
     const configs = await getAgentConfigs();
     expect(configs).toMatchInlineSnapshot(`
