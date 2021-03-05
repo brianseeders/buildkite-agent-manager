@@ -16,8 +16,8 @@ spec:
     spec:
       serviceAccountName: elastic-buildkite-manager
       containers:
-      - name: elastic-buildkite-manager
-        image: @IMAGE_NAME@
-        env:
-          - name: CONTINUOUS_MODE
-            value: true
+        - name: elastic-buildkite-manager
+          image: gcr.io/elastic-kibana-184716/elastic-buildkite-manager
+          env:
+            - name: CONTINUOUS_MODE
+              value: true
