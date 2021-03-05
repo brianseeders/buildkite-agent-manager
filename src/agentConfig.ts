@@ -1,26 +1,8 @@
-// export type GcpAgentConfig = {
-//   project?: string;
-//   zone?: string;
-//   serviceAccount?: string;
-
-import logger from './lib/logger';
-
 import crypto from 'crypto';
+import defaultAgentConfig from './defaultAgentConfig';
 
-//   queue?: string;
-//   name?: string;
-//   overprovision?: number;
-//   minimumAgents?: number;
-//   idleTimeoutSecs?: number;
-//   exitAfterOneJob?: boolean;
-//   image?: string;
-//   machineType?: string;
-//   diskType?: string;
-//   diskSizeGb?: number;
-//   startupScript?: string;
-//   tags?: string[];
-//   metadata?: Record<string, string>;
-// };
+import { INSTANCE_SUFFIX_BYTES } from './gcp';
+import logger from './lib/logger';
 
 export type GcpTopLevelConfig = Partial<GcpAgentConfiguration> & {
   project: string;
@@ -77,6 +59,12 @@ export class GcpAgentConfiguration {
       throw Error(`GCP agent config must include 'image' or 'imageFamily'`);
     }
 
+    // 63 is max length for GCP instance names, minus a unique suffix length, minus 1 character for a hyphen
+    const maxLength = 63 - INSTANCE_SUFFIX_BYTES * 2 - 1;
+    if (config.name.length > maxLength) {
+      throw Error(`GCP agent name must be fewer than ${maxLength} characters.`);
+    }
+
     Object.assign(this, config);
   }
 
@@ -108,53 +96,6 @@ export class GcpAgentConfiguration {
     return hash.update(str).digest('hex');
   }
 }
-
-const config: TopLevelConfig = {
-  gcp: {
-    project: 'elastic-kibana-184716',
-    zone: 'us-central1-b',
-    // serviceAccount: '',
-    agents: [
-      {
-        queue: 'default',
-        name: 'kibana-buildkite',
-        overprovision: 0, // percentage or flat number
-        minimumAgents: 5,
-        maximumAgents: 500,
-        gracefulStopAfterSecs: 60 * 60 * 6,
-        hardStopAfterSecs: 60 * 60 * 9,
-        idleTimeoutSecs: 60 * 60, // stopAfterIdleSecs?
-        exitAfterOneJob: false,
-        imageFamily: 'kibana-bk-dev-agents',
-        machineType: 'e2-small', // e2-small/micro
-        // machineType: 'n2-standard-4',
-        diskType: 'pd-ssd',
-        diskSizeGb: 75,
-        startupScript: '',
-        tags: [],
-        metadata: {},
-      },
-      {
-        queue: 'ci-group',
-        name: 'kibana-buildkite-cigroup', // TODO max length?
-        overprovision: 0,
-        minimumAgents: 0,
-        maximumAgents: 100,
-        gracefulStopAfterSecs: 60 * 60 * 6,
-        hardStopAfterSecs: 60 * 60 * 9,
-        idleTimeoutSecs: 600,
-        exitAfterOneJob: false,
-        imageFamily: 'kibana-bk-dev-agents',
-        machineType: 'n2-standard-8',
-        diskType: 'pd-ssd',
-        diskSizeGb: 256,
-        startupScript: '',
-        tags: [],
-        metadata: {},
-      },
-    ],
-  },
-};
 
 export function getAgentConfigsFromTopLevelConfig(config: TopLevelConfig) {
   const allConfigs = { gcp: [] } as { gcp: GcpAgentConfiguration[] };
@@ -199,8 +140,8 @@ export function getGcpAgentConfigsFromTopLevelConfig(config: TopLevelConfig) {
 export async function getConfig() {
   return {
     gcp: {
-      ...config.gcp,
-      agents: getGcpAgentConfigsFromTopLevelConfig(config),
+      ...defaultAgentConfig.gcp,
+      agents: getGcpAgentConfigsFromTopLevelConfig(defaultAgentConfig),
     },
   } as AgentConfiguration;
 }

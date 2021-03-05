@@ -1,8 +1,7 @@
 import PromisePool from '@supercharge/promise-pool';
-import { TopLevelConfig, getConfig, getAgentConfigs, GcpAgentConfiguration, AgentConfiguration } from './agentConfig';
+import { getConfig, GcpAgentConfiguration, AgentConfiguration } from './agentConfig';
 import { createInstance, deleteInstance, GcpInstance, getAllAgentInstances, getImageForFamily } from './gcp';
 import { Agent, AgentMetrics, Buildkite } from './buildkite';
-import { exec } from 'child_process';
 import logger from './lib/logger';
 
 // TODO should this be purely functional?
@@ -31,6 +30,16 @@ export interface ExecutionPlan {
     instancesToDelete?: GcpInstance[];
     agentConfigsToCreate?: AgentConfigToCreate[];
   };
+}
+
+async function withPromisePool(size, items, func) {
+  return await PromisePool.for(items)
+    .withConcurrency(size)
+    .handleError(async (error) => {
+      // This will cause the pool to stop creating instances after the first error
+      throw error;
+    })
+    .process(func);
 }
 
 export async function getAllQueues(configs: GcpAgentConfiguration[]) {
@@ -138,45 +147,27 @@ export function createPlan(context: ManagerContext) {
   return plan;
 }
 
-// TODO do them in batches?
 export async function createInstances(context: ManagerContext, toCreate: AgentConfigToCreate) {
   logger.info(`Creating ${toCreate.numberToCreate} instances of`, toCreate.config);
 
   try {
-    const { results, errors } = await PromisePool.for(new Array(toCreate.numberToCreate))
-      .withConcurrency(25)
-      .handleError(async (error) => {
-        // This will cause the pool to stop creating instances after the first error
-        throw error;
-      })
-      .process(async () => {
-        await createInstance(toCreate.config);
-        return true;
-      });
+    await withPromisePool(25, new Array(toCreate.numberToCreate), async () => {
+      await createInstance(toCreate.config);
+      return true;
+    });
   } finally {
     logger.info('Done creating instances');
   }
-
-  // for (let i = 0; i < toCreate.numberToCreate; i++) {
-  //   // console.log(`Would create #${i + 1}:`, toCreate);
-  //   await createInstance(toCreate.config);
-  // }
 }
 
 export async function deleteInstances(instances: GcpInstance[]) {
   logger.info(`Deleting ${instances.length} instances: ${instances.map((i) => i.metadata.name).join(', ')}`);
 
   try {
-    const { results, errors } = await PromisePool.for(instances)
-      .withConcurrency(10)
-      .handleError(async (error) => {
-        // This will cause the pool to stop creating instances after the first error
-        throw error;
-      })
-      .process(async (instance) => {
-        await deleteInstance(instance);
-        return true;
-      });
+    await withPromisePool(10, instances, async (instance) => {
+      await deleteInstance(instance);
+      return true;
+    });
   } finally {
     logger.info('Done deleting instances');
   }
@@ -186,16 +177,10 @@ export async function stopAgents(agents: Agent[]) {
   logger.info(`Stopping ${agents.length} agents: ${agents.map((a) => a.name).join(', ')}`);
 
   try {
-    const { results, errors } = await PromisePool.for(agents)
-      .withConcurrency(5)
-      .handleError(async (error) => {
-        // This will cause the pool to stop creating instances after the first error
-        throw error;
-      })
-      .process(async (agent) => {
-        await buildkite.stopAgent(agent);
-        return true;
-      });
+    await withPromisePool(5, agents, async (agent) => {
+      await buildkite.stopAgent(agent);
+      return true;
+    });
   } finally {
     logger.info('Done stopping agents');
   }
@@ -223,15 +208,15 @@ export async function executePlan(context: ManagerContext, plan: ExecutionPlan) 
 
 export async function run() {
   const config = await getConfig();
-  // const agentConfigs = await getAgentConfigs();
 
-  // TODO tie the relevant agents and instances together
+  logger.debug('Gathering data for current state');
   const [agents, instances, queues, imagesFromFamilies] = await Promise.all([
     buildkite.getAgents(),
     getAllAgentInstances(config.gcp),
     getAllQueues(config.gcp.agents),
     getAllImages(config.gcp.project, config.gcp.agents),
   ]);
+  logger.debug('Finished gathering data for current state');
 
   config.gcp.agents.forEach((agent) => {
     if (agent.imageFamily && !agent.image) {
@@ -249,7 +234,6 @@ export async function run() {
   const plan = createPlan(context);
 
   logger.debug('Plan', plan);
-  //return;
 
   await executePlan(context, plan);
 }

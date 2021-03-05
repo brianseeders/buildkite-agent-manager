@@ -14,26 +14,10 @@ steps:
     args: ['--destination=gcr.io/$PROJECT_ID/elastic-buildkite-manager:$COMMIT_SHA', '--cache=true']
     waitFor: ['-']
 
-  - name: 'gcr.io/cloud-builders/gcloud'
+  - name: 'gcr.io/cloud-builders/gke-deploy'
     args:
-      [
-        'beta',
-        'run',
-        'deploy',
-        'elastic-buildkite-manager',
-        '--image',
-        'gcr.io/$PROJECT_ID/elastic-buildkite-manager:$COMMIT_SHA',
-        '--region',
-        'us-central1',
-        '--platform',
-        'managed',
-        '--service-account',
-        'elastic-buildkite-manager@elastic-kibana-184716.iam.gserviceaccount.com',
-        '--allow-unauthenticated',
-        '--concurrency',
-        '80',
-        '--max-instances',
-        '1',
-        '--set-env-vars',
-        'NODE_ENV=production,BOOTSTRAP_GCP_SECRETS=true,LOG_TO_CONSOLE=true,JENKINS_URL=https://plumbers-ci.elastic.co',
-      ]
+      - run
+      - --filename=k8s
+      - --image=gcr.io/$PROJECT_ID/elastic-buildkite-manager:$COMMIT_SHA
+      - --location=us-central1
+      - --cluster=kibana-operations

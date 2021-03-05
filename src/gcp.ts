@@ -1,8 +1,10 @@
+import crypto from 'crypto';
 import Compute from '@google-cloud/compute';
 import { google } from 'googleapis';
 import { GcpAgentConfiguration, GcpTopLevelConfig } from './agentConfig';
 
 const compute = new Compute();
+// ImageFamily fetching isn't included in @google-cloud/compute
 const computeAlt = google.compute('v1');
 
 const auth = new google.auth.GoogleAuth({
@@ -13,12 +15,15 @@ google.options({
   auth: auth,
 });
 
+// the string length of the suffix will be 2*INSTANCE_SUFFIX_BYTES
+export const INSTANCE_SUFFIX_BYTES = 8;
+
 export type GcpInstance = {
   metadata: {
     id: string;
     creationTimestamp: string;
     name: string;
-    // tags?: { // network tags
+    // tags?: { // these are network tags
     //   items?: string[]
     // },
     machineType: string;
@@ -64,9 +69,7 @@ export function getBuildkiteConfig(agentConfig: GcpAgentConfiguration) {
     .join('\n');
 }
 
-export async function createInstance(agentConfig: GcpAgentConfiguration) {
-  const zone = compute.zone(agentConfig.zone);
-  const vm = zone.vm(`${agentConfig.name}-${process.hrtime().join('-')}`); // TODO UUID or similar?
+export function createVmConfiguration(agentConfig: GcpAgentConfiguration) {
   const config = {
     disks: [
       {
@@ -76,7 +79,7 @@ export async function createInstance(agentConfig: GcpAgentConfiguration) {
         initializeParams: {
           sourceImage: `projects/${agentConfig.project}/global/images/${agentConfig.image}`,
           diskType: `projects/${agentConfig.project}/zones/${agentConfig.zone}/diskTypes/${agentConfig.diskType || 'pd-ssd'}`,
-          diskSizeGb: agentConfig.diskSizeGb || '100', // replace default with default from source image?
+          diskSizeGb: agentConfig.diskSizeGb || '100', // TODO replace default with default from source image? need to pull image metadata first if so
         },
       },
     ],
@@ -99,7 +102,7 @@ export async function createInstance(agentConfig: GcpAgentConfiguration) {
     metadata: {
       items: [
         {
-          key: 'bk',
+          key: 'buildkite-agent',
           value: 'true',
         },
         {
@@ -129,12 +132,20 @@ export async function createInstance(agentConfig: GcpAgentConfiguration) {
     },
   };
 
+  return config;
+}
+
+export async function createInstance(agentConfig: GcpAgentConfiguration) {
+  const zone = compute.zone(agentConfig.zone);
+  const vm = zone.vm(`${agentConfig.name}-${crypto.randomBytes(INSTANCE_SUFFIX_BYTES).toString('hex')}`);
+  const config = createVmConfiguration(agentConfig);
+
   const result = await vm.create(config);
   return result;
 }
 
 export async function getAllAgentInstances(gcpConfig: GcpTopLevelConfig) {
-  const vms = await compute.getVMs({ filter: `labels.buildkite-agent=true` });
+  const vms = await compute.getVMs({ filter: `labels.buildkite-agent=true`, maxResults: 500 });
 
   return vms[0] as GcpInstance[];
 }

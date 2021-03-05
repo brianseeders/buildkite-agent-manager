@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elastic-buildkite-manager
+  labels:
+    app: elastic-buildkite-manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elastic-buildkite-manager
+  template:
+    metadata:
+      labels:
+        app: elastic-buildkite-manager
+    spec:
+      containers:
+      - name: elastic-buildkite-manager
+        image: @IMAGE_NAME@

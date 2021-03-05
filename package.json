@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "rm -rf build && tsc --project ./",
-    "build:docker": "docker build -t elastic-buildkite-manager:local .",
+    "build:docker": "DOCKER_BUILDKIT=1 docker build -t elastic-buildkite-manager:local .",
     "start": "ts-node src/index.ts",
     "test": "jest --coverage --no-cache",
     "test:watch": "jest --watch",
@@ -16,16 +16,12 @@
     "@elastic/ecs-winston-format": "^0.2.0",
     "@google-cloud/compute": "^2.4.3",
     "@google-cloud/secret-manager": "^3.2.0",
-    "@octokit/rest": "^18.0.9",
-    "@octokit/webhooks": "^7.15.1",
     "@supercharge/promise-pool": "^1.6.0",
     "axios": "^0.21.1",
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
     "googleapis": "^67.1.1",
     "got": "^11.8.1",
-    "install": "^0.13.0",
-    "npm": "^7.6.0",
     "winston": "^3.3.3"
   },
   "devDependencies": {
