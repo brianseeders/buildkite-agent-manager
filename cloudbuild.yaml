@@ -21,3 +21,5 @@ steps:
       - --image=gcr.io/$PROJECT_ID/elastic-buildkite-manager:$COMMIT_SHA
       - --location=us-central1
       - --cluster=kibana-operations
+      - --namespace=elastic-buildkite-manager
+      - --serviceaccount=elastic-buildkite-manager
