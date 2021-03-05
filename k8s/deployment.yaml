@@ -20,4 +20,4 @@ spec:
           image: gcr.io/elastic-kibana-184716/elastic-buildkite-manager
           env:
             - name: CONTINUOUS_MODE
-              value: true
+              value: 'true'
