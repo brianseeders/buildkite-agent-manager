@@ -14,6 +14,10 @@ spec:
       labels:
         app: elastic-buildkite-manager
     spec:
+      serviceAccountName: elastic-buildkite-manager
       containers:
       - name: elastic-buildkite-manager
         image: @IMAGE_NAME@
+        env:
+          - name: CONTINUOUS_MODE
+            value: true
