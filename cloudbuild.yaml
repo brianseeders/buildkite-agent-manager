@@ -22,4 +22,3 @@ steps:
       - --location=us-central1
       - --cluster=kibana-operations
       - --namespace=elastic-buildkite-manager
-      - --serviceaccount=elastic-buildkite-manager
