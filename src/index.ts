@@ -12,6 +12,7 @@ function sleep(ms) {
 
 (async () => {
   if (process.env.BOOTSTRAP_GCP_SECRETS) {
+    logger.info('Bootstraping secrets from GCP');
     await bootstrapSecrets();
   }
 

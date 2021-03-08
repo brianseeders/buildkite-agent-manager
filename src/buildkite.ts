@@ -2,12 +2,6 @@ import axios, { AxiosInstance } from 'axios';
 import logger from './lib/logger';
 import parseLinkHeader from './lib/parseLinkHeader';
 
-const BUILDKITE_BASE_URL = process.env.BUILDKITE_BASE_URL || 'https://api.buildkite.com';
-const BUILDKITE_TOKEN = process.env.BUILDKITE_TOKEN;
-
-const BUILDKITE_AGENT_BASE_URL = process.env.BUILDKITE_AGENT_BASE_URL || 'https://agent.buildkite.com/v3';
-const BUILDKITE_AGENT_TOKEN = process.env.BUILDKITE_AGENT_TOKEN;
-
 export interface AgentMetrics {
   agents: { idle: number; busy: number; total: number };
   jobs: { scheduled: number; running: number; waiting: number; total: number };
@@ -40,6 +34,12 @@ export class Buildkite {
   agentHttp: AxiosInstance;
 
   constructor() {
+    const BUILDKITE_BASE_URL = process.env.BUILDKITE_BASE_URL || 'https://api.buildkite.com';
+    const BUILDKITE_TOKEN = process.env.BUILDKITE_TOKEN;
+
+    const BUILDKITE_AGENT_BASE_URL = process.env.BUILDKITE_AGENT_BASE_URL || 'https://agent.buildkite.com/v3';
+    const BUILDKITE_AGENT_TOKEN = process.env.BUILDKITE_AGENT_TOKEN;
+
     this.http = axios.create({
       baseURL: BUILDKITE_BASE_URL,
       headers: {

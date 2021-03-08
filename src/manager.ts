@@ -4,8 +4,7 @@ import { createInstance, deleteInstance, GcpInstance, getAllAgentInstances, getI
 import { Agent, AgentMetrics, Buildkite } from './buildkite';
 import logger from './lib/logger';
 
-// TODO should this be purely functional?
-const buildkite = new Buildkite();
+let buildkite: Buildkite;
 
 export interface ManagerContext {
   config: AgentConfiguration;
@@ -207,6 +206,7 @@ export async function executePlan(context: ManagerContext, plan: ExecutionPlan) 
 }
 
 export async function run() {
+  buildkite = buildkite || new Buildkite(); // TODO make this better
   const config = await getConfig();
 
   logger.debug('[manager] Gathering data for current state');
