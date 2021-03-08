@@ -1,10 +1,8 @@
 const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 
 const GCP_SECRET_MAPPING = {
-  GITHUB_TOKEN: 'kibana-jenkins-pr-bot-github-token',
-  WEBHOOK_SECRET: 'kibana-jenkins-pr-bot-webhook-secret',
-  JENKINS_USERNAME: 'kibana-jenkins-pr-bot-jenkins-username',
-  JENKINS_TOKEN: 'kibana-jenkins-pr-bot-jenkins-token',
+  BUILDKITE_TOKEN: 'elastic-buildkite-manager-buildkite-token',
+  BUILDKITE_AGENT_TOKEN: 'elastic-buildkite-manager-buildkite-agent-token',
 };
 
 const getSecret = async (client, id) => {

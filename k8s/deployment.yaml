@@ -21,3 +21,5 @@ spec:
           env:
             - name: CONTINUOUS_MODE
               value: 'true'
+            - name: BOOTSTRAP_GCP_SECRETS
+              value: 'true'
