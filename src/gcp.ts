@@ -131,7 +131,14 @@ export function createVmConfiguration(agentConfig: GcpAgentConfiguration) {
     scheduling: {
       automaticRestart: false,
     },
-  };
+  } as any;
+
+  if (agentConfig.serviceAccounts?.length) {
+    config.serviceAccounts = agentConfig.serviceAccounts.map((serviceAccount) => ({
+      email: serviceAccount,
+      scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+    }));
+  }
 
   return config;
 }

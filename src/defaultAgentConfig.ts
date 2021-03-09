@@ -4,7 +4,7 @@ const defaultConfig: TopLevelConfig = {
   gcp: {
     project: 'elastic-kibana-184716',
     zone: 'us-central1-b',
-    // serviceAccount: '',
+    serviceAccount: 'elastic-buildkite-agent@elastic-kibana-184716.iam.gserviceaccount.com',
     agents: [
       {
         queue: 'default',

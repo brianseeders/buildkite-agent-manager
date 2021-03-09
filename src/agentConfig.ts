@@ -32,6 +32,7 @@ export class GcpAgentConfiguration {
   machineType: string;
 
   serviceAccount?: string;
+  serviceAccounts?: string[];
 
   diskType?: 'pd-ssd' | 'pd-balanced' | 'pd-standard';
   diskSizeGb?: number;
@@ -63,6 +64,10 @@ export class GcpAgentConfiguration {
     const maxLength = 63 - INSTANCE_SUFFIX_BYTES * 2 - 1;
     if (config.name.length > maxLength) {
       throw Error(`GCP agent name must be fewer than ${maxLength} characters.`);
+    }
+
+    if (config.serviceAccount && !config.serviceAccounts) {
+      config.serviceAccounts = [config.serviceAccount];
     }
 
     Object.assign(this, config);
