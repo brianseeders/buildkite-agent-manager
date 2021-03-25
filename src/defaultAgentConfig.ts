@@ -15,7 +15,7 @@ const defaultConfig: TopLevelConfig = {
         maximumAgents: 1500,
         gracefulStopAfterSecs: 60 * 60 * 6,
         hardStopAfterSecs: 60 * 60 * 9,
-        idleTimeoutSecs: 60 * 60, // stopAfterIdleSecs?
+        idleTimeoutSecs: 60 * 15, // stopAfterIdleSecs?
         exitAfterOneJob: false,
         imageFamily: 'kibana-bk-dev-agents',
         machineType: 'e2-small', // e2-small/micro
