@@ -1,8 +1,12 @@
 import crypto from 'crypto';
+import defaultConfig from './defaultConfig';
 import defaultAgentConfig from './defaultAgentConfig';
 
 import { INSTANCE_SUFFIX_BYTES } from './gcp';
 import logger from './lib/logger';
+import axios from 'axios';
+
+let LAST_SUCCESSFUL_CONFIG = null;
 
 export type GcpTopLevelConfig = Partial<GcpAgentConfiguration> & {
   project: string;
@@ -143,12 +147,38 @@ export function getGcpAgentConfigsFromTopLevelConfig(config: TopLevelConfig) {
 }
 
 export async function getConfig() {
+  let remoteConfig: TopLevelConfig = null;
+
+  try {
+    const url = `https://raw.githubusercontent.com/${defaultConfig.repoOwner}/${defaultConfig.repoName}/${defaultConfig.configBranch}/${
+      defaultConfig.configPath || '.ci/buildkite-agents.json'
+    }`;
+
+    logger.debug(`[github] Fetching remote agent config from ${url}`);
+    remoteConfig = (await axios.get(url, { timeout: 10000 })).data;
+    LAST_SUCCESSFUL_CONFIG = remoteConfig;
+  } catch (ex) {
+    remoteConfig = LAST_SUCCESSFUL_CONFIG;
+    logger.error('[github] Error fetching remote agent config, using last successful config if possible');
+    logger.error(ex);
+  }
+
+  logger.debug(`[github] Done fetching remote agent config`);
+
+  if (!remoteConfig) {
+    throw Error("Couldn't fetch agent configuration");
+  }
+
+  return getConfigWithAgents(remoteConfig);
+}
+
+export function getConfigWithAgents(config: TopLevelConfig): AgentConfiguration {
   return {
     gcp: {
-      ...defaultAgentConfig.gcp,
-      agents: getGcpAgentConfigsFromTopLevelConfig(defaultAgentConfig),
+      ...config.gcp,
+      agents: getGcpAgentConfigsFromTopLevelConfig(config),
     },
-  } as AgentConfiguration;
+  };
 }
 
 export async function getAgentConfigs() {

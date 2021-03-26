@@ -235,5 +235,7 @@ export async function run() {
 
   logger.debug('Plan', plan);
 
-  await executePlan(context, plan);
+  if (!process.env.DRY_RUN) {
+    await executePlan(context, plan);
+  }
 }
