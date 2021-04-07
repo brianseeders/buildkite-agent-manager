@@ -23,3 +23,11 @@ spec:
               value: 'true'
             - name: BOOTSTRAP_GCP_SECRETS
               value: 'true'
+            - name: DEBUG
+              value: 'true'
+          livenessProbe:
+            httpGet:
+              path: /live
+              port: 3000
+            initialDelaySeconds: 3
+            periodSeconds: 15

@@ -41,6 +41,16 @@ async function withPromisePool(size, items, func) {
     .process(func);
 }
 
+type Unwrap<T> = T extends PromiseLike<infer U> ? U : T;
+
+function withTimeout<T>(timeoutSeconds: number, promise: Promise<T>): Promise<T> {
+  const timeoutPromise = new Promise<T>((resolve, reject) => {
+    setTimeout(reject, timeoutSeconds * 1000, 'Timeout exceeded');
+  });
+
+  return Promise.race([promise, timeoutPromise]);
+}
+
 export async function getAllQueues(configs: GcpAgentConfiguration[]) {
   const queueSet = new Set<string>();
   for (const config of configs) {
@@ -210,12 +220,13 @@ export async function run() {
   const config = await getConfig();
 
   logger.debug('[manager] Gathering data for current state');
-  const [agents, instances, queues, imagesFromFamilies] = await Promise.all([
+  const promise = Promise.all([
     buildkite.getAgents(),
     getAllAgentInstances(config.gcp),
     getAllQueues(config.gcp.agents),
     getAllImages(config.gcp.project, config.gcp.agents),
   ]);
+  const [agents, instances, queues, imagesFromFamilies] = await withTimeout<Unwrap<typeof promise>>(60, promise);
   logger.debug('[manager] Finished gathering data for current state');
 
   config.gcp.agents.forEach((agent) => {
@@ -233,7 +244,7 @@ export async function run() {
 
   const plan = createPlan(context);
 
-  logger.debug('Plan', plan);
+  // logger.debug('Plan', plan);
 
   if (!process.env.DRY_RUN) {
     await executePlan(context, plan);

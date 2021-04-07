@@ -1,6 +1,5 @@
 import crypto from 'crypto';
 import defaultConfig from './defaultConfig';
-import defaultAgentConfig from './defaultAgentConfig';
 
 import { INSTANCE_SUFFIX_BYTES } from './gcp';
 import logger from './lib/logger';
@@ -185,9 +184,3 @@ export async function getAgentConfigs() {
   const conf = await getConfig();
   return getAgentConfigsFromTopLevelConfig(conf);
 }
-
-// merge the default configs
-// how to efficiently query for the instance count without IG group? Or just create ig groups dynamically?
-// how do we drain old agents on config updates?
-// use API to stop old agents
-//   use a hash of relevant configs that could affect instances and stop old ones that don't match the hash?
