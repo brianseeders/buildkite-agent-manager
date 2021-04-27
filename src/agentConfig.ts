@@ -62,7 +62,7 @@ export class GcpAgentConfiguration {
   private zoneBalanceCounter = 0;
 
   constructor(config: Partial<GcpAgentConfiguration>) {
-    const requiredFields = ['name', 'queue', 'project', 'zone', 'imageFamily', 'machineType'];
+    const requiredFields = ['name', 'queue', 'project', 'imageFamily', 'machineType'];
     for (const field of requiredFields) {
       if (!config[field]) {
         throw Error(`GCP agent config missing '${field}' field`);
