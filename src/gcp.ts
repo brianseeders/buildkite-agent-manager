@@ -57,6 +57,10 @@ export function getBuildkiteConfig(agentConfig: GcpAgentConfiguration) {
     'build-path': '/var/lib/buildkite-agent/builds',
   };
 
+  if (agentConfig.idleTimeoutMins) {
+    bkConfig['disconnect-after-idle-timeout'] = agentConfig.idleTimeoutMins * 60;
+  }
+
   if (agentConfig.idleTimeoutSecs) {
     bkConfig['disconnect-after-idle-timeout'] = agentConfig.idleTimeoutSecs;
   }
@@ -70,7 +74,7 @@ export function getBuildkiteConfig(agentConfig: GcpAgentConfiguration) {
     .join('\n');
 }
 
-export function createVmConfiguration(agentConfig: GcpAgentConfiguration) {
+export function createVmConfiguration(zone: string, agentConfig: GcpAgentConfiguration) {
   const config = {
     disks: [
       {
@@ -79,7 +83,7 @@ export function createVmConfiguration(agentConfig: GcpAgentConfiguration) {
         autoDelete: true,
         initializeParams: {
           sourceImage: `projects/${agentConfig.project}/global/images/${agentConfig.image}`,
-          diskType: `projects/${agentConfig.project}/zones/${agentConfig.zone}/diskTypes/${agentConfig.diskType || 'pd-ssd'}`,
+          diskType: `projects/${agentConfig.project}/zones/${zone}/diskTypes/${agentConfig.diskType || 'pd-ssd'}`,
           diskSizeGb: agentConfig.diskSizeGb || '100', // TODO replace default with default from source image? need to pull image metadata first if so
         },
       },
@@ -144,12 +148,16 @@ export function createVmConfiguration(agentConfig: GcpAgentConfiguration) {
 }
 
 export async function createInstance(agentConfig: GcpAgentConfiguration) {
-  const zone = compute.zone(agentConfig.zone);
-  const vm = zone.vm(`${agentConfig.name}-${crypto.randomBytes(INSTANCE_SUFFIX_BYTES).toString('hex')}`);
-  const config = createVmConfiguration(agentConfig);
+  const zone = agentConfig.getNextZone();
+  const vm = compute.zone(zone).vm(`${agentConfig.name}-${crypto.randomBytes(INSTANCE_SUFFIX_BYTES).toString('hex')}`);
+  const config = createVmConfiguration(zone, agentConfig);
 
-  const result = await vm.create(config);
-  return result;
+  if (!process.env.DRY_RUN) {
+    const result = await vm.create(config);
+    return result;
+  } else {
+    logger.info('[gcp] Would create ', config);
+  }
 }
 
 export async function getAllAgentInstances(gcpConfig: GcpTopLevelConfig) {
@@ -161,9 +169,13 @@ export async function getAllAgentInstances(gcpConfig: GcpTopLevelConfig) {
 }
 
 export async function deleteInstance(instance: GcpInstance) {
-  const zone = compute.zone(instance.metadata.zone.split('/').pop());
-  const vm = zone.vm(instance.metadata.name);
-  return vm.delete();
+  if (!process.env.DRY_RUN) {
+    const zone = compute.zone(instance.metadata.zone.split('/').pop());
+    const vm = zone.vm(instance.metadata.name);
+    return vm.delete();
+  } else {
+    logger.info('[gcp] Would delete ', instance.metadata.name);
+  }
 }
 
 export async function getImageForFamily(projectId: string, family: string) {

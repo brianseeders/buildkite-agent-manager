@@ -29,7 +29,9 @@ export class GcpAgentConfiguration {
   queue: string;
 
   project: string;
-  zone: string;
+  // zone Deprecated, use zones
+  zone?: string;
+  zones?: string[];
   imageFamily?: string;
   image?: string;
   machineType: string;
@@ -46,10 +48,18 @@ export class GcpAgentConfiguration {
   overprovision?: number;
   minimumAgents?: number;
   maximumAgents?: number;
+  // secs Deprecated
   idleTimeoutSecs?: number;
+  idleTimeoutMins?: number;
   exitAfterOneJob?: boolean;
+  // secs Deprecated
   gracefulStopAfterSecs?: number;
+  gracefulStopAfterMins?: number;
+  // secs Deprecated
   hardStopAfterSecs?: number;
+  hardStopAfterMins?: number;
+
+  private zoneBalanceCounter = 0;
 
   constructor(config: Partial<GcpAgentConfiguration>) {
     const requiredFields = ['name', 'queue', 'project', 'zone', 'imageFamily', 'machineType'];
@@ -63,6 +73,10 @@ export class GcpAgentConfiguration {
       throw Error(`GCP agent config must include 'image' or 'imageFamily'`);
     }
 
+    if (!config.zone && !config.zones) {
+      throw Error(`GCP agent config must include 'zone' or 'zones'`);
+    }
+
     // 63 is max length for GCP instance names, minus a unique suffix length, minus 1 character for a hyphen
     const maxLength = 63 - INSTANCE_SUFFIX_BYTES * 2 - 1;
     if (config.name.length > maxLength) {
@@ -73,7 +87,21 @@ export class GcpAgentConfiguration {
       config.serviceAccounts = [config.serviceAccount];
     }
 
+    if (config.zone && !config.zones?.length) {
+      config.zones = [config.zone];
+    }
+
     Object.assign(this, config);
+  }
+
+  getNextZone(): string {
+    const zone = this.zones[this.zoneBalanceCounter];
+    this.zoneBalanceCounter += 1;
+    if (this.zoneBalanceCounter >= this.zones.length) {
+      this.zoneBalanceCounter = 0;
+    }
+
+    return zone;
   }
 
   // Should return a hash that only changes if a configuration changes that would require launching a new agent
@@ -81,7 +109,7 @@ export class GcpAgentConfiguration {
   hash() {
     const hashFields = [
       'project',
-      'zone',
+      'zones',
       'image',
       'imageFamily',
       'machineType',
@@ -92,6 +120,7 @@ export class GcpAgentConfiguration {
       'tags',
       'metadata',
       'idleTimeoutSecs',
+      'idleTimeoutMins',
       'exitAfterOneJob',
     ];
 

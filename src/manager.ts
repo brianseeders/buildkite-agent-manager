@@ -243,10 +243,6 @@ export async function run() {
   };
 
   const plan = createPlan(context);
-
   // logger.debug('Plan', plan);
-
-  if (!process.env.DRY_RUN) {
-    await executePlan(context, plan);
-  }
+  await executePlan(context, plan);
 }

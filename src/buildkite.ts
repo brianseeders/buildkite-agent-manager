@@ -90,6 +90,10 @@ export class Buildkite {
   };
 
   stopAgent = async (agent: Agent) => {
-    return await this.http.put(`v2/organizations/elastic/agents/${agent.id}/stop`, { force: false });
+    if (!process.env.DRY_RUN) {
+      return await this.http.put(`v2/organizations/elastic/agents/${agent.id}/stop`, { force: false });
+    } else {
+      logger.info(`[buildkite] would stop ${agent.id} / ${agent.name}`);
+    }
   };
 }
