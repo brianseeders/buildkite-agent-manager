@@ -144,6 +144,19 @@ export function createVmConfiguration(zone: string, agentConfig: GcpAgentConfigu
     }));
   }
 
+  if (agentConfig.localSsds && agentConfig.localSsds > 0) {
+    for (let i = 0; i < agentConfig.localSsds; i++) {
+      config.disks.push({
+        type: 'SCRATCH',
+        initializeParams: {
+          diskType: `zones/${zone}/diskTypes/local-ssd`,
+        },
+        autoDelete: true,
+        interface: 'NVME',
+      });
+    }
+  }
+
   return config;
 }
 

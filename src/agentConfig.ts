@@ -41,6 +41,7 @@ export class GcpAgentConfiguration {
 
   diskType?: 'pd-ssd' | 'pd-balanced' | 'pd-standard';
   diskSizeGb?: number;
+  localSsds?: number;
   startupScript?: string;
   tags?: string[];
   metadata?: Record<string, string>;
@@ -116,6 +117,7 @@ export class GcpAgentConfiguration {
       'serviceAccount',
       'diskType',
       'diskSizeGb',
+      'localSsds',
       'startupScript',
       'tags',
       'metadata',
